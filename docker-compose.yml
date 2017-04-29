@@ -2,8 +2,8 @@ version: '2'
 
 services:
   bind:
-    restart: always
-    image: sameersbn/bind:9.9.5-20161106
+    build: .
+    image: dockerserver/bind:latest
     ports:
     - "53:53/udp"
     - "53:53/tcp"
