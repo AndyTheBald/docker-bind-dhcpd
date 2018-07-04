@@ -1,5 +1,4 @@
 FROM debian:jessie
-MAINTAINER cuentas@servinube.net
 
 ENV BIND_USER=bind \
     BIND_VERSION=1:9.9.5 \
