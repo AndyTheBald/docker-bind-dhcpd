@@ -47,6 +47,13 @@ create_dhcp_data_dir() {
   fi
   rm -rf /var/lib/dhcp
   ln -sf ${DHCP_DATA_DIR}/lib /var/lib/dhcp
+
+  #link the default file into the data dir
+  if [ ! -f ${DHCP_DATA_DIR}/init_defaults ]; then
+	mv /etc/default/isc-dhcp-server ${DHCP_DATA_DIR}/init_defaults
+  fi
+  rm -f /etc/default/isc-dhcp-server
+  ln -sf ${DHCP_DATA_DIR}/init_defaults /etc/default/isc-dhcp-server
 }
 
 create_webmin_data_dir() {
@@ -106,6 +113,9 @@ if [[ -z ${1} ]]; then
     echo "Starting webmin..."
     /etc/init.d/webmin start
   fi
+
+  echo "Starting dhcpd..."
+  /etc/init.d/isc-dhcp-server start
 
   echo "Starting named..."
   exec $(which named) -u ${BIND_USER} -g ${EXTRA_ARGS}
