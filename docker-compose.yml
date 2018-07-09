@@ -7,6 +7,7 @@ services:
     ports:
     - "53:53/udp"
     - "53:53/tcp"
+	- "67:67/udp"
     - "10000:10000/tcp"
     volumes:
     - /srv/docker/bind:/data
