@@ -1,13 +1,16 @@
-version: '3'
-
 services:
-  bind:
+  infra:
     build: .
-    image: swampig/docker-bind-dhcp:latest
+    image: infra
     ports:
     - "53:53/udp"
     - "53:53/tcp"
     - "67:67/udp"
     - "10000:10000/tcp"
     volumes:
-    - /srv/docker/bind:/data
+    - infra-disk:/data 
+
+volumes:
+  infra-disk:
+    external: true
+    name: infra-disk    

@@ -88,12 +88,33 @@ create_bind_cache_dir() {
   chown root:${BIND_USER} /var/cache/bind
 }
 
+create_dhcp_current_network() {
+  DHCPD_FILE=${DHCP_DATA_DIR}/etc/dhcpd.conf
+  if [ -f ${DHCPD_FILE} ]; then
+        ETH0_CONFIG=`ifconfig eth0 | sed -n "s/inet \([^ ]*\).*netmask \([^ ]*\).*/\1 \2/p"`
+        IPCALC=`ipcalc -bn $ETH0_CONFIG`
+        NETWORK=`echo $IPCALC | sed -n "s/.*Network:\s*\([0-9.]*\).*/\1/p"`
+        SUBNET=`echo $IPCALC | sed -n "s/.*Netmask:\s*\([0-9.]*\).*/\1/p"`
+        SUBNET_BLOCK="subnet ${NETWORK} netmask ${SUBNET}"
+
+        # Does our subnet exist in the block?
+        if grep -q "${SUBNET_BLOCK}" ${DHCPD_FILE}
+        then
+                echo We found our network in the setup
+        else
+                sed -i "0,/^subnet .*/s/^subnet .*/${SUBNET_BLOCK} {\n}\n\n&/" ${DHCPD_FILE}
+                echo "Injected our subnet"
+        fi
+  fi
+}
+
 create_bind_pid_dir
 create_bind_data_dir
 create_bind_cache_dir
 
 create_dhcp_data_dir
 create_dhcp_pid_dir
+create_dhcp_current_network
 
 
 # allow arguments to be passed to named

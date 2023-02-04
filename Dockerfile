@@ -9,6 +9,7 @@ ENV BIND_USER=bind \
 RUN apt-get update && apt-get install --no-install-recommends -y wget gnupg
 # Systemctl needs to be installed before startup for it to work.  And rsyslog is needed to diagnose dhcpd
 # RUN apt-get install -y systemctl rsyslog
+RUN apt-get install -y ipcalc net-tools
 RUN rm -rf /etc/apt/apt.conf.d/docker-gzip-indexes
 RUN wget --no-check-certificate -q -O - http://www.webmin.com/jcameron-key.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/jcameron-key.gpg 
 RUN echo "deb http://download.webmin.com/download/repository sarge contrib" >> /etc/apt/sources.list
