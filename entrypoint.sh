@@ -91,30 +91,64 @@ create_bind_cache_dir() {
 create_dhcp_current_network() {
   DHCPD_FILE=${DHCP_DATA_DIR}/etc/dhcpd.conf
   if [ -f ${DHCPD_FILE} ]; then
-        ETH0_CONFIG=`ifconfig eth0 | sed -n "s/inet \([^ ]*\).*netmask \([^ ]*\).*/\1 \2/p"`
-        IPCALC=`ipcalc -bn $ETH0_CONFIG`
-        NETWORK=`echo $IPCALC | sed -n "s/.*Network:\s*\([0-9.]*\).*/\1/p"`
-        SUBNET=`echo $IPCALC | sed -n "s/.*Netmask:\s*\([0-9.]*\).*/\1/p"`
-        SUBNET_BLOCK="subnet ${NETWORK} netmask ${SUBNET}"
+    # Get all the ipv4 networks
+    ETH_CONFIG=`ifconfig | sed -n "s/inet \([^ \t]*\).*netmask \([^ ]*\).*/\1 \2/p"`
+    echo "${ETH_CONFIG}" | while read ADAPTER; do
+      IPCALC=`ipcalc -bn ${ADAPTER}`
+      NETWORK=`echo $IPCALC | sed -n "s/.*Network:\s*\([0-9.]*\).*/\1/p"`
+      SUBNET=`echo $IPCALC | sed -n "s/.*Netmask:\s*\([0-9.]*\).*/\1/p"`
+      SUBNET_BLOCK="subnet ${NETWORK} netmask ${SUBNET}"
 
-        # Does our subnet exist in the block?
-        if grep -q "${SUBNET_BLOCK}" ${DHCPD_FILE}
-        then
-                echo We found our network in the setup
-        else
-                sed -i "0,/^subnet .*/s/^subnet .*/${SUBNET_BLOCK} {\n}\n\n&/" ${DHCPD_FILE}
-                echo "Injected our subnet"
-        fi
+      # ignore loopback
+      if [ "$NETWORK" == "127.0.0.0" ]; then
+        continue
+      fi
+
+      # ignore any /32
+      if [ "$SUBNET" == "255.255.255.255" ]; then
+        continue
+      fi
+
+      # Does our subnet exist in the block?
+      if grep -q "${SUBNET_BLOCK}" ${DHCPD_FILE}
+      then
+        echo We found our network ${NETWORK} in the setup
+      else
+        sed -i "0,/^#*subnet .*/s/^subnet .*/${SUBNET_BLOCK} {\n}\n\n&/" ${DHCPD_FILE}
+        echo "Injected our subnet ${NETWORK}"
+      fi
+    done
+  fi
+}
+
+create_bind9_service_link() {
+  BIND9_SERVICE_FILE=/usr/lib/systemd/system/bind9.service
+  NAMED_SERVICE_FILE=/usr/lib/systemd/system/named.service
+  if [ ! -f ${BIND9_SERVICE_FILE} ]; then
+    ln -s ${NAMED_SERVICE_FILE} ${BIND9_SERVICE_FILE}
+  fi
+}
+
+#Don't activate ipv6, do be prepared to go on any ipv4
+create_dhcp_listen_adapters() {
+  #1: lo    in
+  ADAPTERS=$(ip -4 -o a | sed -n "s/^[^:]*:[[:space:]]*\([^ ]*\).*/\1 /p" | tr -d '\n')
+  QUOTED=\"${ADAPTERS}\"
+  DHCP_DEFAULTS=${DHCP_DATA_DIR}/init_defaults
+  if [ -f ${DHCP_DEFAULTS} ]; then
+    sed -i "s/INTERFACESv4=.*/INTERFACESv4=${QUOTED}/g" ${DHCP_DEFAULTS}
   fi
 }
 
 create_bind_pid_dir
 create_bind_data_dir
 create_bind_cache_dir
+create_bind9_service_link
 
 create_dhcp_data_dir
 create_dhcp_pid_dir
 create_dhcp_current_network
+create_dhcp_listen_adapters
 
 
 # allow arguments to be passed to named
@@ -132,7 +166,7 @@ if [[ -z ${1} ]]; then
     create_webmin_data_dir
     set_root_passwd
     echo "Starting webmin..."
-    /etc/init.d/webmin start
+    systemctl restart webmin
   fi
 
   echo "Starting dhcpd..."

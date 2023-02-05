@@ -9,6 +9,9 @@ services:
     - "10000:10000/tcp"
     volumes:
     - infra-disk:/data 
+    network_mode: "host"   
+#    stdin_open: true # docker run -i
+#    tty: true        # docker run -t   
 
 volumes:
   infra-disk:
