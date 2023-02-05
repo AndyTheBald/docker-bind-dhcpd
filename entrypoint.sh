@@ -169,6 +169,11 @@ if [[ -z ${1} ]]; then
     systemctl restart webmin
   fi
 
+  # If the PID file exists at this point it's an error
+  if [ -f "/var/run/dhcpd.pid" ]; then
+    echo "Deleting existing DHCP PID..."
+    rm /var/run/dhcpd.pid
+  fi
   echo "Starting dhcpd..."
   /etc/init.d/isc-dhcp-server start
 
